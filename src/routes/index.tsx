@@ -104,7 +104,7 @@ function App() {
               view === v ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent"
             }`}
           >
-            <span className="mr-2">{ICONES[v]}</span>{v}
+            <span className="mr-2">{ICONES[v]}</span>{ROTULOS[v]}
           </button>
         ))}
         <div className="mt-auto pt-6 text-xs opacity-60">
