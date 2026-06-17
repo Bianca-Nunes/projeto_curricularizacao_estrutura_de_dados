@@ -268,7 +268,7 @@ function Produtos({ lista }: any) {
   const ps: Produto[] = lista.listar();
   return (
     <>
-      <H1 sub="Lista Duplamente Encadeada • navegação ↔">Produtos</H1>
+      <H1 sub="">Produtos</H1>
       <Tabela cabecalho={["Código","Nome","Margem","Rendimento","Itens na receita"]}
         linhas={ps.map((p) => [p.codigo, p.nome, `${p.margem}%`, p.rendimento, p.receita.length])} />
     </>
