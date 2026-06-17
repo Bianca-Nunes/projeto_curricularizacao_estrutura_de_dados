@@ -111,7 +111,7 @@ function App() {
         {view === "Dashboard" && <Dashboard listaInsumos={listaInsumos} listaProdutos={listaProdutos} pilha={pilha} fila={fila} />}
         {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} onChange={force} />}
         {view === "Estoque" && <Estoque lista={listaInsumos} pilha={pilha} fila={fila} onChange={force} />}
-        {view === "Produtos" && <Produtos lista={listaProdutos} hash={hashProdutos} onChange={force} />}
+        {view === "Produtos" && <Produtos lista={listaProdutos} hash={hashProdutos} hashInsumos={hashInsumos} listaInsumos={listaInsumos} onChange={force} />}
         {view === "Receitas" && <Receitas listaProdutos={listaProdutos} hashInsumos={hashInsumos} />}
         {view === "Histórico" && <Historico pilha={pilha} hashInsumos={hashInsumos} />}
         {view === "Reposição" && <Reposicao fila={fila} hashInsumos={hashInsumos} onChange={force} />}
@@ -264,31 +264,99 @@ function Estoque({ lista, pilha, fila, onChange }: any) {
   );
 }
 
-function Produtos({ lista, hash, onChange }: any) {
+function Produtos({ lista, hash, hashInsumos, listaInsumos, onChange }: any) {
   const ps: Produto[] = lista.listar();
+  const insumos: Insumo[] = listaInsumos.listar();
   const [form, setForm] = useState({ codigo: "", nome: "", margem: 0, rendimento: 1 });
+  const [receita, setReceita] = useState<{ codigoInsumo: string; qtd: number }[]>([]);
+  const [itemSel, setItemSel] = useState(insumos[0]?.codigo || "");
+  const [itemQtd, setItemQtd] = useState(1);
+
+  const addItem = () => {
+    if (!itemSel || itemQtd <= 0) return;
+    if (receita.some((r) => r.codigoInsumo === itemSel)) return alert("Insumo já adicionado");
+    setReceita([...receita, { codigoInsumo: itemSel, qtd: itemQtd }]);
+    setItemQtd(1);
+  };
+  const removerItem = (c: string) => setReceita(receita.filter((r) => r.codigoInsumo !== c));
+
+  // Cálculos automáticos
+  const custoTotal = receita.reduce((acc, r) => {
+    const ins: Insumo | null = hashInsumos.buscar(r.codigoInsumo);
+    return acc + (ins?.valor || 0) * r.qtd;
+  }, 0);
+  const custoUnit = form.rendimento > 0 ? custoTotal / form.rendimento : 0;
+  const lucroUnit = (custoUnit * form.margem) / 100;
+  const precoVenda = custoUnit + lucroUnit;
+
   const cadastrar = () => {
-    if (!form.codigo || !form.nome) return alert("Código e nome são obrigatórios");
+    if (!form.codigo.trim() || !form.nome.trim()) return alert("Código e nome são obrigatórios");
+    if (form.codigo.length > 20 || form.nome.length > 100) return alert("Código/nome muito longos");
     if (hash.buscar(form.codigo)) return alert("Código já existe");
-    const novo: Produto = { ...form, receita: [] };
+    const novo: Produto = { ...form, receita: [...receita] };
     lista.inserir(novo); hash.inserir(novo.codigo, novo);
     setForm({ codigo: "", nome: "", margem: 0, rendimento: 1 });
+    setReceita([]);
     onChange();
   };
   const remover = (c: string) => { lista.remover((p: Produto) => p.codigo === c); onChange(); };
+
   return (
     <>
       <H1 sub="">Produtos</H1>
-      <div className="bg-card p-5 rounded-xl border mb-5 grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
-        <div><label className="text-xs text-muted-foreground">Código</label>
-          <input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
-        <div><label className="text-xs text-muted-foreground">Nome</label>
-          <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
-        <div><label className="text-xs text-muted-foreground">Margem (%)</label>
-          <input type="number" step="1" value={form.margem} onChange={(e) => setForm({ ...form, margem: parseFloat(e.target.value) || 0 })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
-        <div><label className="text-xs text-muted-foreground">Rendimento</label>
-          <input type="number" step="1" value={form.rendimento} onChange={(e) => setForm({ ...form, rendimento: parseFloat(e.target.value) || 1 })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
-        <button onClick={cadastrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
+      <div className="bg-card p-5 rounded-xl border mb-5 space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div><label className="text-xs text-muted-foreground">Código</label>
+            <input maxLength={20} value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+          <div><label className="text-xs text-muted-foreground">Nome</label>
+            <input maxLength={100} value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+          <div><label className="text-xs text-muted-foreground">Margem (%)</label>
+            <input type="number" step="1" value={form.margem} onChange={(e) => setForm({ ...form, margem: parseFloat(e.target.value) || 0 })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+          <div><label className="text-xs text-muted-foreground">Rendimento</label>
+            <input type="number" step="1" value={form.rendimento} onChange={(e) => setForm({ ...form, rendimento: parseFloat(e.target.value) || 1 })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+        </div>
+
+        <div className="border-t pt-4">
+          <div className="text-sm font-semibold mb-2 text-foreground">Itens da receita</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+            <div className="md:col-span-2"><label className="text-xs text-muted-foreground">Insumo</label>
+              <select value={itemSel} onChange={(e) => setItemSel(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm">
+                {insumos.map((i) => <option key={i.codigo} value={i.codigo}>{i.nome} (R$ {i.valor.toFixed(2)}/{i.unidade})</option>)}
+              </select></div>
+            <div><label className="text-xs text-muted-foreground">Quantidade</label>
+              <input type="number" step="0.01" value={itemQtd} onChange={(e) => setItemQtd(parseFloat(e.target.value) || 0)} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+            <button onClick={addItem} className="bg-secondary text-secondary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Adicionar item</button>
+          </div>
+          {receita.length > 0 && (
+            <div className="mt-3 border rounded-md overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-secondary"><tr>
+                  <th className="text-left p-2">Insumo</th><th className="text-left p-2">Qtd</th>
+                  <th className="text-left p-2">Subtotal</th><th className="p-2"></th>
+                </tr></thead>
+                <tbody>{receita.map((r) => {
+                  const ins: Insumo | null = hashInsumos.buscar(r.codigoInsumo);
+                  const sub = (ins?.valor || 0) * r.qtd;
+                  return (<tr key={r.codigoInsumo} className="border-t">
+                    <td className="p-2">{ins?.nome || r.codigoInsumo}</td>
+                    <td className="p-2">{r.qtd} {ins?.unidade}</td>
+                    <td className="p-2">R$ {sub.toFixed(2)}</td>
+                    <td className="p-2 text-right"><button onClick={() => removerItem(r.codigoInsumo)} className="text-destructive text-xs hover:underline">remover</button></td>
+                  </tr>);
+                })}</tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t pt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-secondary/50 rounded-md p-3"><div className="text-xs text-muted-foreground">Custo total</div><div className="text-lg font-bold text-foreground">R$ {custoTotal.toFixed(2)}</div></div>
+          <div className="bg-secondary/50 rounded-md p-3"><div className="text-xs text-muted-foreground">Custo unitário</div><div className="text-lg font-bold text-foreground">R$ {custoUnit.toFixed(2)}</div></div>
+          <div className="bg-secondary/50 rounded-md p-3"><div className="text-xs text-muted-foreground">Lucro por un.</div><div className="text-lg font-bold text-chart-2">R$ {lucroUnit.toFixed(2)}</div></div>
+          <div className="bg-primary/10 rounded-md p-3"><div className="text-xs text-muted-foreground">Preço de venda</div><div className="text-lg font-bold text-primary">R$ {precoVenda.toFixed(2)}</div></div>
+        </div>
+
+        <button onClick={cadastrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90 w-full md:w-auto">+ Cadastrar produto</button>
       </div>
       <Tabela cabecalho={["Código","Nome","Margem","Rendimento","Itens na receita","Ação"]}
         linhas={ps.map((p) => [p.codigo, p.nome, `${p.margem}%`, p.rendimento, p.receita.length,
