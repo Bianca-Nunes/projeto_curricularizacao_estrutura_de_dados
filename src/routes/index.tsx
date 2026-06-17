@@ -321,7 +321,7 @@ function Reposicao({ fila, hashInsumos, onChange }: any) {
   const atender = () => { fila.desenfileirar(); onChange(); };
   return (
     <>
-      <H1 sub="Fila FIFO — atender remove o pedido mais antigo">Pedidos de Reposição</H1>
+      <H1 sub="">Pedidos de Reposição</H1>
       <button onClick={atender} disabled={!pedidos.length} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold mb-4 disabled:opacity-40">
         Atender próximo
       </button>
