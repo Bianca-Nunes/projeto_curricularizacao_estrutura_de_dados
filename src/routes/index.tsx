@@ -122,13 +122,16 @@ function App() {
 }
 
 // ===== Componentes auxiliares =====
-function Card({ titulo, valor, sub }: { titulo: string; valor: string | number; sub?: string }) {
+function Card({ titulo, valor, sub, onClick }: { titulo: string; valor: string | number; sub?: string; onClick?: () => void }) {
   return (
-    <div className="bg-card rounded-xl p-5 shadow-sm border">
+    <button
+      onClick={onClick}
+      className={`bg-card rounded-xl p-5 shadow-sm border text-left w-full transition hover:shadow-md hover:border-primary/40 ${onClick ? "cursor-pointer" : ""}`}
+    >
       <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{titulo}</div>
       <div className="text-3xl font-bold text-primary mt-2">{valor}</div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
-    </div>
+    </button>
   );
 }
 
