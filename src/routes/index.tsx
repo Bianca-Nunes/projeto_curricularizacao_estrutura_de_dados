@@ -91,7 +91,7 @@ function App() {
           <h1 className="text-xl font-bold text-sidebar-primary">🍰 SisInsumos</h1>
           <p className="text-xs opacity-70 mt-1">Controle & Precificação</p>
         </div>
-        {VIEWS.map((v) => (
+        {VIEWS.filter(v => v !== "Benchmark").map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
