@@ -161,18 +161,17 @@ function Tabela({ cabecalho, linhas }: { cabecalho: string[]; linhas: (string | 
 }
 
 // ===== Views =====
-function Dashboard({ listaInsumos, listaProdutos, pilha, fila }: any) {
+function Dashboard({ listaInsumos, listaProdutos, pilha, fila, setView }: any) {
   const ins: Insumo[] = listaInsumos.listar();
-  const baixos = ins.filter((i) => i.estoque < i.minimo);
   const movs: Movimentacao[] = pilha.exibir();
   return (
     <>
       <H1 sub="Visão geral do seu negócio">Dashboard</H1>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Card titulo="Insumos" valor={ins.length} />
-        <Card titulo="Produtos" valor={listaProdutos.tamanho} />
-        <Card titulo="Estoque baixo" valor={baixos.length} />
-        <Card titulo="Reposições" valor={fila.tamanho} />
+        <Card titulo="Insumos" valor={ins.length} onClick={() => setView("Insumos")} />
+        <Card titulo="Produtos" valor={listaProdutos.tamanho} onClick={() => setView("Produtos")} />
+        <Card titulo="Estoque" valor={ins.length} sub="Controle de movimentações" onClick={() => setView("Estoque")} />
+        <Card titulo="Reposições" valor={fila.tamanho} onClick={() => setView("Reposição")} />
       </div>
       <h2 className="text-lg font-semibold mb-3 text-foreground">Últimas movimentações</h2>
       <Tabela
