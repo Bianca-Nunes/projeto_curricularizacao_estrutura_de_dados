@@ -44,11 +44,16 @@ const produtosSeed: Produto[] = [
   ]},
 ];
 
-const VIEWS = ["Dashboard", "Insumos", "Estoque", "Produtos", "Receitas", "Histórico", "Reposição", "Benchmark"] as const;
+const VIEWS = ["Dashboard", "Insumos", "Produtos", "Receitas", "Histórico", "Reposição", "Benchmark"] as const;
 type View = typeof VIEWS[number];
 
+const ROTULOS: Record<View, string> = {
+  Dashboard: "Dashboard", Insumos: "Insumos e Controle de Estoque", Produtos: "Produtos",
+  Receitas: "Receitas", Histórico: "Histórico", Reposição: "Reposição", Benchmark: "Benchmark",
+};
+
 const ICONES: Record<View, string> = {
-  Dashboard: "📊", Insumos: "🥚", Estoque: "📦", Produtos: "🎂",
+  Dashboard: "📊", Insumos: "🥚", Produtos: "🎂",
   Receitas: "💰", Histórico: "📜", Reposição: "🔄", Benchmark: "⚡",
 };
 
