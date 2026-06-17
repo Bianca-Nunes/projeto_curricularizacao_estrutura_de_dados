@@ -1,29 +1,382 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import {
+  ListaEncadeada, Pilha, Fila, TabelaHash,
+  buscaSequencial, bubbleSort, insertionSort,
+} from "@/lib/estruturas";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "SisInsumos — Controle de Insumos e Precificação" },
+      { name: "description", content: "Sistema acadêmico para controle de estoque e cálculo de preço de venda demonstrando estruturas de dados." },
     ],
   }),
-  component: Index,
+  component: App,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+// ===== Tipos =====
+type Insumo = { codigo: string; nome: string; categoria: string; unidade: string; estoque: number; minimo: number; valor: number };
+type Produto = { codigo: string; nome: string; margem: number; rendimento: number; receita: { codigoInsumo: string; qtd: number }[] };
+type Movimentacao = { data: string; codigoInsumo: string; tipo: "ENTRADA" | "SAIDA" | "AJUSTE"; qtd: number; obs?: string };
+type Reposicao = { codigoInsumo: string; sugerido: number; data: string };
+
+// ===== Dados iniciais =====
+const insumosSeed: Insumo[] = [
+  { codigo: "INS001", nome: "Farinha de trigo", categoria: "Secos", unidade: "kg", estoque: 10, minimo: 2, valor: 6.5 },
+  { codigo: "INS002", nome: "Chocolate em pó", categoria: "Secos", unidade: "kg", estoque: 1.5, minimo: 1, valor: 32 },
+  { codigo: "INS003", nome: "Ovos", categoria: "Frescos", unidade: "un", estoque: 30, minimo: 12, valor: 0.85 },
+  { codigo: "INS004", nome: "Leite condensado", categoria: "Laticínios", unidade: "un", estoque: 2, minimo: 3, valor: 7.2 },
+  { codigo: "INS005", nome: "Açúcar refinado", categoria: "Secos", unidade: "kg", estoque: 8, minimo: 2, valor: 4.5 },
+  { codigo: "INS006", nome: "Manteiga", categoria: "Laticínios", unidade: "kg", estoque: 1.2, minimo: 0.5, valor: 38 },
+];
+
+const produtosSeed: Produto[] = [
+  { codigo: "PRD001", nome: "Bolo de Chocolate", margem: 80, rendimento: 10, receita: [
+    { codigoInsumo: "INS001", qtd: 0.5 }, { codigoInsumo: "INS002", qtd: 0.2 },
+    { codigoInsumo: "INS003", qtd: 4 }, { codigoInsumo: "INS005", qtd: 0.4 },
+  ]},
+  { codigo: "PRD002", nome: "Brigadeiro Gourmet (cento)", margem: 120, rendimento: 100, receita: [
+    { codigoInsumo: "INS002", qtd: 0.3 }, { codigoInsumo: "INS004", qtd: 4 }, { codigoInsumo: "INS006", qtd: 0.1 },
+  ]},
+  { codigo: "PRD003", nome: "Pão de Mel", margem: 90, rendimento: 20, receita: [
+    { codigoInsumo: "INS001", qtd: 0.4 }, { codigoInsumo: "INS002", qtd: 0.1 }, { codigoInsumo: "INS005", qtd: 0.3 },
+  ]},
+];
+
+const VIEWS = ["Dashboard", "Insumos", "Estoque", "Produtos", "Receitas", "Histórico", "Reposição", "Benchmark"] as const;
+type View = typeof VIEWS[number];
+
+const ICONES: Record<View, string> = {
+  Dashboard: "📊", Insumos: "🥚", Estoque: "📦", Produtos: "🎂",
+  Receitas: "💰", Histórico: "📜", Reposição: "🔄", Benchmark: "⚡",
+};
+
+function App() {
+  const [view, setView] = useState<View>("Dashboard");
+
+  // Estado mantido em estruturas manuais
+  const [, setTick] = useState(0);
+  const force = () => setTick((t) => t + 1);
+
+  const { listaInsumos, hashInsumos, listaProdutos, hashProdutos, pilha, fila } = useMemo(() => {
+    const li = new ListaEncadeada<Insumo>();
+    const hi = new TabelaHash<Insumo>();
+    insumosSeed.forEach((i) => { li.inserir(i); hi.inserir(i.codigo, i); });
+
+    const lp = new ListaEncadeada<Produto>();
+    const hp = new TabelaHash<Produto>();
+    produtosSeed.forEach((p) => { lp.inserir(p); hp.inserir(p.codigo, p); });
+
+    const p = new Pilha<Movimentacao>();
+    const f = new Fila<Reposicao>();
+    // Pré-popula com algumas movimentações
+    const movs: Movimentacao[] = [
+      { data: "2026-06-15 09:12", codigoInsumo: "INS001", tipo: "ENTRADA", qtd: 5, obs: "Compra mensal" },
+      { data: "2026-06-16 14:30", codigoInsumo: "INS002", tipo: "SAIDA", qtd: 0.5, obs: "Bolo do dia" },
+      { data: "2026-06-17 08:45", codigoInsumo: "INS004", tipo: "SAIDA", qtd: 3, obs: "Brigadeiros" },
+    ];
+    movs.forEach((m) => p.push(m));
+    // INS004 e INS002 estão abaixo do mínimo → enfileirar
+    insumosSeed.filter((i) => i.estoque < i.minimo).forEach((i) => {
+      f.enfileirar({ codigoInsumo: i.codigo, sugerido: i.minimo * 2 - i.estoque, data: "2026-06-17 09:00" });
+    });
+    return { listaInsumos: li, hashInsumos: hi, listaProdutos: lp, hashProdutos: hp, pilha: p, fila: f };
+  }, []);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="flex min-h-screen w-full bg-background">
+      <aside className="w-64 bg-sidebar text-sidebar-foreground p-5 flex flex-col gap-1">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-sidebar-primary">🍰 SisInsumos</h1>
+          <p className="text-xs opacity-70 mt-1">Controle & Precificação</p>
+        </div>
+        {VIEWS.map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+              view === v ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent"
+            }`}
+          >
+            <span className="mr-2">{ICONES[v]}</span>{v}
+          </button>
+        ))}
+        <div className="mt-auto pt-6 text-xs opacity-60">
+          Trabalho acadêmico<br />Estrutura de Dados • ADS
+        </div>
+      </aside>
+
+      <main className="flex-1 p-8 overflow-auto">
+        {view === "Dashboard" && <Dashboard listaInsumos={listaInsumos} listaProdutos={listaProdutos} pilha={pilha} fila={fila} />}
+        {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} onChange={force} />}
+        {view === "Estoque" && <Estoque lista={listaInsumos} pilha={pilha} fila={fila} onChange={force} />}
+        {view === "Produtos" && <Produtos lista={listaProdutos} />}
+        {view === "Receitas" && <Receitas listaProdutos={listaProdutos} hashInsumos={hashInsumos} />}
+        {view === "Histórico" && <Historico pilha={pilha} hashInsumos={hashInsumos} />}
+        {view === "Reposição" && <Reposicao fila={fila} hashInsumos={hashInsumos} onChange={force} />}
+        {view === "Benchmark" && <Benchmark lista={listaInsumos} hash={hashInsumos} />}
+      </main>
     </div>
+  );
+}
+
+// ===== Componentes auxiliares =====
+function Card({ titulo, valor, sub }: { titulo: string; valor: string | number; sub?: string }) {
+  return (
+    <div className="bg-card rounded-xl p-5 shadow-sm border">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{titulo}</div>
+      <div className="text-3xl font-bold text-primary mt-2">{valor}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+function H1({ children, sub }: { children: React.ReactNode; sub?: string }) {
+  return (
+    <div className="mb-6">
+      <h1 className="text-3xl font-bold text-foreground">{children}</h1>
+      {sub && <p className="text-sm text-muted-foreground mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+function Tabela({ cabecalho, linhas }: { cabecalho: string[]; linhas: (string | number | React.ReactNode)[][] }) {
+  return (
+    <div className="bg-card rounded-xl border overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-secondary"><tr>{cabecalho.map((c) => <th key={c} className="text-left p-3 font-semibold text-secondary-foreground">{c}</th>)}</tr></thead>
+        <tbody>
+          {linhas.length === 0 && <tr><td colSpan={cabecalho.length} className="p-6 text-center text-muted-foreground">Sem registros</td></tr>}
+          {linhas.map((l, i) => (
+            <tr key={i} className="border-t">{l.map((c, j) => <td key={j} className="p-3">{c}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ===== Views =====
+function Dashboard({ listaInsumos, listaProdutos, pilha, fila }: any) {
+  const ins: Insumo[] = listaInsumos.listar();
+  const baixos = ins.filter((i) => i.estoque < i.minimo);
+  const movs: Movimentacao[] = pilha.exibir();
+  return (
+    <>
+      <H1 sub="Visão geral do seu negócio">Dashboard</H1>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <Card titulo="Insumos" valor={ins.length} sub="na lista encadeada" />
+        <Card titulo="Produtos" valor={listaProdutos.tamanho} sub="na lista dupla" />
+        <Card titulo="Estoque baixo" valor={baixos.length} sub="abaixo do mínimo" />
+        <Card titulo="Reposições" valor={fila.tamanho} sub="na fila FIFO" />
+      </div>
+      <h2 className="text-lg font-semibold mb-3 text-foreground">Últimas movimentações (topo da pilha)</h2>
+      <Tabela
+        cabecalho={["Data", "Insumo", "Tipo", "Qtd", "Obs"]}
+        linhas={movs.slice(0, 8).map((m) => [m.data, m.codigoInsumo, <span className={`px-2 py-1 rounded text-xs font-medium ${
+          m.tipo === "ENTRADA" ? "bg-chart-2/20 text-chart-2" : m.tipo === "SAIDA" ? "bg-destructive/20 text-destructive" : "bg-muted text-foreground"
+        }`}>{m.tipo}</span>, m.qtd, m.obs || "-"])}
+      />
+    </>
+  );
+}
+
+function Insumos({ lista, hash, onChange }: any) {
+  const [busca, setBusca] = useState("");
+  const [form, setForm] = useState({ codigo: "", nome: "", categoria: "", unidade: "kg", estoque: 0, minimo: 0, valor: 0 });
+  const todos: Insumo[] = lista.listar();
+  const filtrados = busca ? buscaSequencial(todos, (i) => i.nome.toLowerCase().includes(busca.toLowerCase())) : todos;
+  const cadastrar = () => {
+    if (!form.codigo || !form.nome) return alert("Código e nome são obrigatórios");
+    if (hash.buscar(form.codigo)) return alert("Código já existe");
+    lista.inserir({ ...form }); hash.inserir(form.codigo, form);
+    setForm({ codigo: "", nome: "", categoria: "", unidade: "kg", estoque: 0, minimo: 0, valor: 0 });
+    onChange();
+  };
+  const remover = (c: string) => { lista.remover((i: Insumo) => i.codigo === c); onChange(); };
+  return (
+    <>
+      <H1 sub="Lista Simplesmente Encadeada • Busca por nome = sequencial">Insumos</H1>
+      <div className="bg-card p-5 rounded-xl border mb-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+        {(["codigo","nome","categoria","unidade"] as const).map((k) => (
+          <input key={k} placeholder={k} value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+            className="border rounded-md px-3 py-2 text-sm" />
+        ))}
+        {(["estoque","minimo","valor"] as const).map((k) => (
+          <input key={k} type="number" step="0.01" placeholder={k} value={(form as any)[k]}
+            onChange={(e) => setForm({ ...form, [k]: parseFloat(e.target.value) || 0 })}
+            className="border rounded-md px-3 py-2 text-sm" />
+        ))}
+        <button onClick={cadastrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
+      </div>
+      <input placeholder="🔍 Buscar por nome (busca sequencial)..." value={busca} onChange={(e) => setBusca(e.target.value)}
+        className="w-full border rounded-md px-3 py-2 text-sm mb-3" />
+      <Tabela
+        cabecalho={["Código","Nome","Categoria","Estoque","R$ unit.","Ação"]}
+        linhas={filtrados.map((i) => [
+          i.codigo, i.nome, i.categoria,
+          <>{i.estoque} {i.unidade} {i.estoque < i.minimo && <span className="ml-2 text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">BAIXO</span>}</>,
+          `R$ ${i.valor.toFixed(2)}`,
+          <button onClick={() => remover(i.codigo)} className="text-destructive text-xs hover:underline">excluir</button>,
+        ])}
+      />
+    </>
+  );
+}
+
+function Estoque({ lista, pilha, fila, onChange }: any) {
+  const ins: Insumo[] = lista.listar();
+  const [codigo, setCodigo] = useState(ins[0]?.codigo || "");
+  const [tipo, setTipo] = useState<"ENTRADA" | "SAIDA" | "AJUSTE">("ENTRADA");
+  const [qtd, setQtd] = useState(1);
+  const [obs, setObs] = useState("");
+  const registrar = () => {
+    const i = ins.find((x) => x.codigo === codigo); if (!i) return;
+    if (tipo === "ENTRADA") i.estoque += qtd;
+    else if (tipo === "SAIDA") {
+      if (i.estoque - qtd < 0) return alert("Estoque insuficiente!");
+      i.estoque -= qtd;
+    } else i.estoque = qtd;
+    pilha.push({ data: new Date().toLocaleString("pt-BR"), codigoInsumo: codigo, tipo, qtd, obs });
+    if (i.estoque < i.minimo) fila.enfileirar({ codigoInsumo: i.codigo, sugerido: i.minimo * 2 - i.estoque, data: new Date().toLocaleString("pt-BR") });
+    setObs(""); onChange();
+  };
+  return (
+    <>
+      <H1 sub="Toda alteração empilha um registro no histórico (LIFO)">Controle de Estoque</H1>
+      <div className="bg-card p-5 rounded-xl border grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+        <div><label className="text-xs text-muted-foreground">Insumo</label>
+          <select value={codigo} onChange={(e) => setCodigo(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm">
+            {ins.map((i) => <option key={i.codigo} value={i.codigo}>{i.codigo} — {i.nome}</option>)}
+          </select></div>
+        <div><label className="text-xs text-muted-foreground">Tipo</label>
+          <select value={tipo} onChange={(e) => setTipo(e.target.value as any)} className="w-full border rounded-md px-3 py-2 text-sm">
+            <option>ENTRADA</option><option>SAIDA</option><option>AJUSTE</option>
+          </select></div>
+        <div><label className="text-xs text-muted-foreground">Quantidade</label>
+          <input type="number" step="0.01" value={qtd} onChange={(e) => setQtd(parseFloat(e.target.value) || 0)} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+        <div><label className="text-xs text-muted-foreground">Observação</label>
+          <input value={obs} onChange={(e) => setObs(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+        <button onClick={registrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">Registrar</button>
+      </div>
+    </>
+  );
+}
+
+function Produtos({ lista }: any) {
+  const ps: Produto[] = lista.listar();
+  return (
+    <>
+      <H1 sub="Lista Duplamente Encadeada • navegação ↔">Produtos</H1>
+      <Tabela cabecalho={["Código","Nome","Margem","Rendimento","Itens na receita"]}
+        linhas={ps.map((p) => [p.codigo, p.nome, `${p.margem}%`, p.rendimento, p.receita.length])} />
+    </>
+  );
+}
+
+function Receitas({ listaProdutos, hashInsumos }: any) {
+  const ps: Produto[] = listaProdutos.listar();
+  const [cod, setCod] = useState(ps[0]?.codigo || "");
+  const p = ps.find((x) => x.codigo === cod);
+  let custoTotal = 0;
+  const itens = (p?.receita || []).map((r) => {
+    const ins: Insumo | null = hashInsumos.buscar(r.codigoInsumo);
+    const sub = (ins?.valor || 0) * r.qtd; custoTotal += sub;
+    return { nome: ins?.nome || "?", qtd: r.qtd, unid: ins?.unidade || "", unit: ins?.valor || 0, sub };
+  });
+  const custoUnit = p ? custoTotal / p.rendimento : 0;
+  const preco = p ? custoUnit + (custoUnit * p.margem) / 100 : 0;
+  return (
+    <>
+      <H1 sub="Cálculo automático: Preço = Custo + (Custo × Margem)">Receitas e Precificação</H1>
+      <select value={cod} onChange={(e) => setCod(e.target.value)} className="border rounded-md px-3 py-2 text-sm mb-5">
+        {ps.map((x) => <option key={x.codigo} value={x.codigo}>{x.nome}</option>)}
+      </select>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card titulo="Custo total" valor={`R$ ${custoTotal.toFixed(2)}`} sub={`receita p/ ${p?.rendimento} un`} />
+        <Card titulo="Custo unitário" valor={`R$ ${custoUnit.toFixed(2)}`} />
+        <Card titulo="Margem" valor={`${p?.margem || 0}%`} />
+        <Card titulo="Preço sugerido" valor={`R$ ${preco.toFixed(2)}`} sub="por unidade" />
+      </div>
+      <Tabela cabecalho={["Insumo","Qtd usada","R$ unit.","Subtotal"]}
+        linhas={itens.map((i) => [i.nome, `${i.qtd} ${i.unid}`, `R$ ${i.unit.toFixed(2)}`, `R$ ${i.sub.toFixed(2)}`])} />
+    </>
+  );
+}
+
+function Historico({ pilha, hashInsumos }: any) {
+  const movs: Movimentacao[] = pilha.exibir();
+  return (
+    <>
+      <H1 sub="Pilha LIFO — topo é a movimentação mais recente">Histórico</H1>
+      <Tabela cabecalho={["Data","Insumo","Tipo","Qtd","Obs"]}
+        linhas={movs.map((m) => [m.data, hashInsumos.buscar(m.codigoInsumo)?.nome || m.codigoInsumo, m.tipo, m.qtd, m.obs || "-"])} />
+    </>
+  );
+}
+
+function Reposicao({ fila, hashInsumos, onChange }: any) {
+  const pedidos: Reposicao[] = fila.consultar();
+  const atender = () => { fila.desenfileirar(); onChange(); };
+  return (
+    <>
+      <H1 sub="Fila FIFO — atender remove o pedido mais antigo">Pedidos de Reposição</H1>
+      <button onClick={atender} disabled={!pedidos.length} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold mb-4 disabled:opacity-40">
+        Atender próximo
+      </button>
+      <Tabela cabecalho={["#","Insumo","Qtd sugerida","Criado em"]}
+        linhas={pedidos.map((p, i) => [i + 1, hashInsumos.buscar(p.codigoInsumo)?.nome || p.codigoInsumo, p.sugerido.toFixed(2), p.data])} />
+    </>
+  );
+}
+
+function Benchmark({ lista, hash }: any) {
+  const [codigo, setCodigo] = useState("INS001");
+  const [resBusca, setResBusca] = useState<{ tecnica: string; tempoMs: number; comp: number; achou: boolean }[]>([]);
+  const [resOrd, setResOrd] = useState<{ tecnica: string; tempoMs: number }[]>([]);
+
+  const compararBusca = () => {
+    const arr: Insumo[] = lista.listar();
+    const t1 = performance.now(); let comp = 0; let achouSeq = false;
+    for (const i of arr) { comp++; if (i.codigo === codigo) { achouSeq = true; break; } }
+    const tSeq = performance.now() - t1;
+    const t2 = performance.now(); const achouHash = !!hash.buscar(codigo); const tHash = performance.now() - t2;
+    setResBusca([
+      { tecnica: "Busca Sequencial", tempoMs: tSeq, comp, achou: achouSeq },
+      { tecnica: "Busca por Hash",   tempoMs: tHash, comp: 1, achou: achouHash },
+    ]);
+  };
+  const compararOrd = () => {
+    const arr: Insumo[] = lista.listar();
+    const b = bubbleSort(arr, (a, c) => a.nome.localeCompare(c.nome));
+    const i = insertionSort(arr, (a, c) => a.nome.localeCompare(c.nome));
+    setResOrd([
+      { tecnica: "Bubble Sort", tempoMs: b.tempoMs },
+      { tecnica: "Insertion Sort", tempoMs: i.tempoMs },
+    ]);
+  };
+
+  return (
+    <>
+      <H1 sub="Compare empiricamente os algoritmos implementados manualmente">Benchmark</H1>
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-card p-5 rounded-xl border">
+          <h3 className="font-semibold mb-3">Busca: Sequencial vs Hash</h3>
+          <div className="flex gap-2 mb-3">
+            <input value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Código do insumo" className="flex-1 border rounded-md px-3 py-2 text-sm" />
+            <button onClick={compararBusca} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold">Comparar</button>
+          </div>
+          {resBusca.length > 0 && <Tabela cabecalho={["Técnica","Tempo (ms)","Comparações","Achou"]}
+            linhas={resBusca.map((r) => [r.tecnica, r.tempoMs.toFixed(4), r.comp, r.achou ? "✓" : "✗"])} />}
+        </div>
+        <div className="bg-card p-5 rounded-xl border">
+          <h3 className="font-semibold mb-3">Ordenação: Bubble vs Insertion</h3>
+          <button onClick={compararOrd} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold mb-3">Ordenar por nome</button>
+          {resOrd.length > 0 && <Tabela cabecalho={["Técnica","Tempo (ms)"]}
+            linhas={resOrd.map((r) => [r.tecnica, r.tempoMs.toFixed(4)])} />}
+        </div>
+      </div>
+    </>
   );
 }
