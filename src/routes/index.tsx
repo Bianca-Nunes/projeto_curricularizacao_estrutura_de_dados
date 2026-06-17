@@ -309,7 +309,7 @@ function Historico({ pilha, hashInsumos }: any) {
   const movs: Movimentacao[] = pilha.exibir();
   return (
     <>
-      <H1 sub="Pilha LIFO — topo é a movimentação mais recente">Histórico</H1>
+      <H1 sub="">Histórico</H1>
       <Tabela cabecalho={["Data","Insumo","Tipo","Qtd","Obs"]}
         linhas={movs.map((m) => [m.data, hashInsumos.buscar(m.codigoInsumo)?.nome || m.codigoInsumo, m.tipo, m.qtd, m.obs || "-"])} />
     </>
