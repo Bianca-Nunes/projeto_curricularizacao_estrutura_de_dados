@@ -174,7 +174,7 @@ function Dashboard({ listaInsumos, listaProdutos, pilha, fila, setView }: any) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Card titulo="Insumos" valor={ins.length} onClick={() => setView("Insumos")} />
         <Card titulo="Produtos" valor={listaProdutos.tamanho} onClick={() => setView("Produtos")} />
-        <Card titulo="Estoque" valor={ins.length} sub="Controle de movimentações" onClick={() => setView("Estoque")} />
+        <Card titulo="Movimentações" valor={pilha.tamanho} sub="Controle de estoque" onClick={() => setView("Insumos")} />
         <Card titulo="Reposições" valor={fila.tamanho} onClick={() => setView("Reposição")} />
       </div>
       <h2 className="text-lg font-semibold mb-3 text-foreground">Últimas movimentações</h2>
