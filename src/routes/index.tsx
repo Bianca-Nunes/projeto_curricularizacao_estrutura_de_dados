@@ -114,8 +114,7 @@ function App() {
 
       <main className="flex-1 p-8 overflow-auto">
         {view === "Dashboard" && <Dashboard listaInsumos={listaInsumos} listaProdutos={listaProdutos} pilha={pilha} fila={fila} setView={setView} />}
-        {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} onChange={force} />}
-        {view === "Estoque" && <Estoque lista={listaInsumos} pilha={pilha} fila={fila} onChange={force} />}
+        {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} pilha={pilha} fila={fila} onChange={force} />}
         {view === "Produtos" && <Produtos lista={listaProdutos} hash={hashProdutos} hashInsumos={hashInsumos} listaInsumos={listaInsumos} onChange={force} />}
         {view === "Receitas" && <Receitas listaProdutos={listaProdutos} hashInsumos={hashInsumos} />}
         {view === "Histórico" && <Historico pilha={pilha} hashInsumos={hashInsumos} />}
