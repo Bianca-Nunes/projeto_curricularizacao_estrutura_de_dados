@@ -111,7 +111,7 @@ function App() {
         {view === "Dashboard" && <Dashboard listaInsumos={listaInsumos} listaProdutos={listaProdutos} pilha={pilha} fila={fila} />}
         {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} onChange={force} />}
         {view === "Estoque" && <Estoque lista={listaInsumos} pilha={pilha} fila={fila} onChange={force} />}
-        {view === "Produtos" && <Produtos lista={listaProdutos} />}
+        {view === "Produtos" && <Produtos lista={listaProdutos} hash={hashProdutos} onChange={force} />}
         {view === "Receitas" && <Receitas listaProdutos={listaProdutos} hashInsumos={hashInsumos} />}
         {view === "Histórico" && <Historico pilha={pilha} hashInsumos={hashInsumos} />}
         {view === "Reposição" && <Reposicao fila={fila} hashInsumos={hashInsumos} onChange={force} />}
@@ -264,13 +264,35 @@ function Estoque({ lista, pilha, fila, onChange }: any) {
   );
 }
 
-function Produtos({ lista }: any) {
+function Produtos({ lista, hash, onChange }: any) {
   const ps: Produto[] = lista.listar();
+  const [form, setForm] = useState({ codigo: "", nome: "", margem: 0, rendimento: 1 });
+  const cadastrar = () => {
+    if (!form.codigo || !form.nome) return alert("Código e nome são obrigatórios");
+    if (hash.buscar(form.codigo)) return alert("Código já existe");
+    const novo: Produto = { ...form, receita: [] };
+    lista.inserir(novo); hash.inserir(novo.codigo, novo);
+    setForm({ codigo: "", nome: "", margem: 0, rendimento: 1 });
+    onChange();
+  };
+  const remover = (c: string) => { lista.remover((p: Produto) => p.codigo === c); onChange(); };
   return (
     <>
       <H1 sub="">Produtos</H1>
-      <Tabela cabecalho={["Código","Nome","Margem","Rendimento","Itens na receita"]}
-        linhas={ps.map((p) => [p.codigo, p.nome, `${p.margem}%`, p.rendimento, p.receita.length])} />
+      <div className="bg-card p-5 rounded-xl border mb-5 grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+        <div><label className="text-xs text-muted-foreground">Código</label>
+          <input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+        <div><label className="text-xs text-muted-foreground">Nome</label>
+          <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+        <div><label className="text-xs text-muted-foreground">Margem (%)</label>
+          <input type="number" step="1" value={form.margem} onChange={(e) => setForm({ ...form, margem: parseFloat(e.target.value) || 0 })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+        <div><label className="text-xs text-muted-foreground">Rendimento</label>
+          <input type="number" step="1" value={form.rendimento} onChange={(e) => setForm({ ...form, rendimento: parseFloat(e.target.value) || 1 })} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+        <button onClick={cadastrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
+      </div>
+      <Tabela cabecalho={["Código","Nome","Margem","Rendimento","Itens na receita","Ação"]}
+        linhas={ps.map((p) => [p.codigo, p.nome, `${p.margem}%`, p.rendimento, p.receita.length,
+          <button onClick={() => remover(p.codigo)} className="text-destructive text-xs hover:underline">excluir</button>])} />
     </>
   );
 }
