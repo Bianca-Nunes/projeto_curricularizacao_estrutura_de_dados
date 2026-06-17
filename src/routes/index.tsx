@@ -108,7 +108,7 @@ function App() {
       </aside>
 
       <main className="flex-1 p-8 overflow-auto">
-        {view === "Dashboard" && <Dashboard listaInsumos={listaInsumos} listaProdutos={listaProdutos} pilha={pilha} fila={fila} />}
+        {view === "Dashboard" && <Dashboard listaInsumos={listaInsumos} listaProdutos={listaProdutos} pilha={pilha} fila={fila} setView={setView} />}
         {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} onChange={force} />}
         {view === "Estoque" && <Estoque lista={listaInsumos} pilha={pilha} fila={fila} onChange={force} />}
         {view === "Produtos" && <Produtos lista={listaProdutos} hash={hashProdutos} hashInsumos={hashInsumos} listaInsumos={listaInsumos} onChange={force} />}
@@ -122,13 +122,16 @@ function App() {
 }
 
 // ===== Componentes auxiliares =====
-function Card({ titulo, valor, sub }: { titulo: string; valor: string | number; sub?: string }) {
+function Card({ titulo, valor, sub, onClick }: { titulo: string; valor: string | number; sub?: string; onClick?: () => void }) {
   return (
-    <div className="bg-card rounded-xl p-5 shadow-sm border">
+    <button
+      onClick={onClick}
+      className={`bg-card rounded-xl p-5 shadow-sm border text-left w-full transition hover:shadow-md hover:border-primary/40 ${onClick ? "cursor-pointer" : ""}`}
+    >
       <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{titulo}</div>
       <div className="text-3xl font-bold text-primary mt-2">{valor}</div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
-    </div>
+    </button>
   );
 }
 
@@ -158,18 +161,17 @@ function Tabela({ cabecalho, linhas }: { cabecalho: string[]; linhas: (string | 
 }
 
 // ===== Views =====
-function Dashboard({ listaInsumos, listaProdutos, pilha, fila }: any) {
+function Dashboard({ listaInsumos, listaProdutos, pilha, fila, setView }: any) {
   const ins: Insumo[] = listaInsumos.listar();
-  const baixos = ins.filter((i) => i.estoque < i.minimo);
   const movs: Movimentacao[] = pilha.exibir();
   return (
     <>
       <H1 sub="Visão geral do seu negócio">Dashboard</H1>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Card titulo="Insumos" valor={ins.length} />
-        <Card titulo="Produtos" valor={listaProdutos.tamanho} />
-        <Card titulo="Estoque baixo" valor={baixos.length} />
-        <Card titulo="Reposições" valor={fila.tamanho} />
+        <Card titulo="Insumos" valor={ins.length} onClick={() => setView("Insumos")} />
+        <Card titulo="Produtos" valor={listaProdutos.tamanho} onClick={() => setView("Produtos")} />
+        <Card titulo="Estoque" valor={ins.length} sub="Controle de movimentações" onClick={() => setView("Estoque")} />
+        <Card titulo="Reposições" valor={fila.tamanho} onClick={() => setView("Reposição")} />
       </div>
       <h2 className="text-lg font-semibold mb-3 text-foreground">Últimas movimentações</h2>
       <Tabela
