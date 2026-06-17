@@ -111,7 +111,7 @@ function App() {
         {view === "Dashboard" && <Dashboard listaInsumos={listaInsumos} listaProdutos={listaProdutos} pilha={pilha} fila={fila} />}
         {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} onChange={force} />}
         {view === "Estoque" && <Estoque lista={listaInsumos} pilha={pilha} fila={fila} onChange={force} />}
-        {view === "Produtos" && <Produtos lista={listaProdutos} />}
+        {view === "Produtos" && <Produtos lista={listaProdutos} hash={hashProdutos} onChange={force} />}
         {view === "Receitas" && <Receitas listaProdutos={listaProdutos} hashInsumos={hashInsumos} />}
         {view === "Histórico" && <Historico pilha={pilha} hashInsumos={hashInsumos} />}
         {view === "Reposição" && <Reposicao fila={fila} hashInsumos={hashInsumos} onChange={force} />}
