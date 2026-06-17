@@ -197,7 +197,7 @@ function Insumos({ lista, hash, onChange }: any) {
   const remover = (c: string) => { lista.remover((i: Insumo) => i.codigo === c); onChange(); };
   return (
     <>
-      <H1 sub="Lista Simplesmente Encadeada • Busca por nome = sequencial">Insumos</H1>
+      <H1 sub="">Insumos</H1>
       <div className="bg-card p-5 rounded-xl border mb-5 grid grid-cols-2 md:grid-cols-4 gap-3">
         {(["codigo","nome","categoria","unidade"] as const).map((k) => (
           <input key={k} placeholder={k} value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })}
