@@ -166,12 +166,12 @@ function Dashboard({ listaInsumos, listaProdutos, pilha, fila }: any) {
     <>
       <H1 sub="Visão geral do seu negócio">Dashboard</H1>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Card titulo="Insumos" valor={ins.length} sub="na lista encadeada" />
-        <Card titulo="Produtos" valor={listaProdutos.tamanho} sub="na lista dupla" />
-        <Card titulo="Estoque baixo" valor={baixos.length} sub="abaixo do mínimo" />
-        <Card titulo="Reposições" valor={fila.tamanho} sub="na fila FIFO" />
+        <Card titulo="Insumos" valor={ins.length} />
+        <Card titulo="Produtos" valor={listaProdutos.tamanho} />
+        <Card titulo="Estoque baixo" valor={baixos.length} />
+        <Card titulo="Reposições" valor={fila.tamanho} />
       </div>
-      <h2 className="text-lg font-semibold mb-3 text-foreground">Últimas movimentações (topo da pilha)</h2>
+      <h2 className="text-lg font-semibold mb-3 text-foreground">Últimas movimentações</h2>
       <Tabela
         cabecalho={["Data", "Insumo", "Tipo", "Qtd", "Obs"]}
         linhas={movs.slice(0, 8).map((m) => [m.data, m.codigoInsumo, <span className={`px-2 py-1 rounded text-xs font-medium ${
