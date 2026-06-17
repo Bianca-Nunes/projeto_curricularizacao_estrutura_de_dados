@@ -244,7 +244,7 @@ function Estoque({ lista, pilha, fila, onChange }: any) {
   };
   return (
     <>
-      <H1 sub="Toda alteração empilha um registro no histórico (LIFO)">Controle de Estoque</H1>
+      <H1 sub="">Controle de Estoque</H1>
       <div className="bg-card p-5 rounded-xl border grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
         <div><label className="text-xs text-muted-foreground">Insumo</label>
           <select value={codigo} onChange={(e) => setCodigo(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm">
