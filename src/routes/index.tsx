@@ -44,11 +44,16 @@ const produtosSeed: Produto[] = [
   ]},
 ];
 
-const VIEWS = ["Dashboard", "Insumos", "Estoque", "Produtos", "Receitas", "Histórico", "Reposição", "Benchmark"] as const;
+const VIEWS = ["Dashboard", "Insumos", "Produtos", "Receitas", "Histórico", "Reposição", "Benchmark"] as const;
 type View = typeof VIEWS[number];
 
+const ROTULOS: Record<View, string> = {
+  Dashboard: "Dashboard", Insumos: "Insumos e Controle de Estoque", Produtos: "Produtos",
+  Receitas: "Receitas", Histórico: "Histórico", Reposição: "Reposição", Benchmark: "Benchmark",
+};
+
 const ICONES: Record<View, string> = {
-  Dashboard: "📊", Insumos: "🥚", Estoque: "📦", Produtos: "🎂",
+  Dashboard: "📊", Insumos: "🥚", Produtos: "🎂",
   Receitas: "💰", Histórico: "📜", Reposição: "🔄", Benchmark: "⚡",
 };
 
@@ -99,7 +104,7 @@ function App() {
               view === v ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent"
             }`}
           >
-            <span className="mr-2">{ICONES[v]}</span>{v}
+            <span className="mr-2">{ICONES[v]}</span>{ROTULOS[v]}
           </button>
         ))}
         <div className="mt-auto pt-6 text-xs opacity-60">
@@ -109,8 +114,7 @@ function App() {
 
       <main className="flex-1 p-8 overflow-auto">
         {view === "Dashboard" && <Dashboard listaInsumos={listaInsumos} listaProdutos={listaProdutos} pilha={pilha} fila={fila} setView={setView} />}
-        {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} onChange={force} />}
-        {view === "Estoque" && <Estoque lista={listaInsumos} pilha={pilha} fila={fila} onChange={force} />}
+        {view === "Insumos" && <Insumos lista={listaInsumos} hash={hashInsumos} pilha={pilha} fila={fila} onChange={force} />}
         {view === "Produtos" && <Produtos lista={listaProdutos} hash={hashProdutos} hashInsumos={hashInsumos} listaInsumos={listaInsumos} onChange={force} />}
         {view === "Receitas" && <Receitas listaProdutos={listaProdutos} hashInsumos={hashInsumos} />}
         {view === "Histórico" && <Historico pilha={pilha} hashInsumos={hashInsumos} />}
@@ -170,7 +174,7 @@ function Dashboard({ listaInsumos, listaProdutos, pilha, fila, setView }: any) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Card titulo="Insumos" valor={ins.length} onClick={() => setView("Insumos")} />
         <Card titulo="Produtos" valor={listaProdutos.tamanho} onClick={() => setView("Produtos")} />
-        <Card titulo="Estoque" valor={ins.length} sub="Controle de movimentações" onClick={() => setView("Estoque")} />
+        <Card titulo="Movimentações" valor={pilha.tamanho} sub="Controle de estoque" onClick={() => setView("Insumos")} />
         <Card titulo="Reposições" valor={fila.tamanho} onClick={() => setView("Reposição")} />
       </div>
       <h2 className="text-lg font-semibold mb-3 text-foreground">Últimas movimentações</h2>
@@ -184,7 +188,7 @@ function Dashboard({ listaInsumos, listaProdutos, pilha, fila, setView }: any) {
   );
 }
 
-function Insumos({ lista, hash, onChange }: any) {
+function Insumos({ lista, hash, pilha, fila, onChange }: any) {
   const [busca, setBusca] = useState("");
   const [form, setForm] = useState({ codigo: "", nome: "", categoria: "", unidade: "kg", estoque: 0, minimo: 0, valor: 0 });
   const todos: Insumo[] = lista.listar();
@@ -197,71 +201,86 @@ function Insumos({ lista, hash, onChange }: any) {
     onChange();
   };
   const remover = (c: string) => { lista.remover((i: Insumo) => i.codigo === c); onChange(); };
-  return (
-    <>
-      <H1 sub="">Insumos</H1>
-      <div className="bg-card p-5 rounded-xl border mb-5 grid grid-cols-2 md:grid-cols-4 gap-3">
-        {(["codigo","nome","categoria","unidade"] as const).map((k) => (
-          <input key={k} placeholder={k} value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-            className="border rounded-md px-3 py-2 text-sm" />
-        ))}
-        {(["estoque","minimo","valor"] as const).map((k) => (
-          <input key={k} type="number" step="0.01" placeholder={k} value={(form as any)[k]}
-            onChange={(e) => setForm({ ...form, [k]: parseFloat(e.target.value) || 0 })}
-            className="border rounded-md px-3 py-2 text-sm" />
-        ))}
-        <button onClick={cadastrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
-      </div>
-      <input placeholder="🔍 Buscar por nome (busca sequencial)..." value={busca} onChange={(e) => setBusca(e.target.value)}
-        className="w-full border rounded-md px-3 py-2 text-sm mb-3" />
-      <Tabela
-        cabecalho={["Código","Nome","Categoria","Estoque","R$ unit.","Ação"]}
-        linhas={filtrados.map((i) => [
-          i.codigo, i.nome, i.categoria,
-          <>{i.estoque} {i.unidade} {i.estoque < i.minimo && <span className="ml-2 text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">BAIXO</span>}</>,
-          `R$ ${i.valor.toFixed(2)}`,
-          <button onClick={() => remover(i.codigo)} className="text-destructive text-xs hover:underline">excluir</button>,
-        ])}
-      />
-    </>
-  );
-}
 
-function Estoque({ lista, pilha, fila, onChange }: any) {
-  const ins: Insumo[] = lista.listar();
-  const [codigo, setCodigo] = useState(ins[0]?.codigo || "");
-  const [tipo, setTipo] = useState<"ENTRADA" | "SAIDA" | "AJUSTE">("ENTRADA");
-  const [qtd, setQtd] = useState(1);
-  const [obs, setObs] = useState("");
+  // ===== Controle de estoque =====
+  const [mCodigo, setMCodigo] = useState(todos[0]?.codigo || "");
+  const [mTipo, setMTipo] = useState<"ENTRADA" | "SAIDA" | "AJUSTE">("ENTRADA");
+  const [mQtd, setMQtd] = useState(1);
+  const [mObs, setMObs] = useState("");
   const registrar = () => {
-    const i = ins.find((x) => x.codigo === codigo); if (!i) return;
-    if (tipo === "ENTRADA") i.estoque += qtd;
-    else if (tipo === "SAIDA") {
-      if (i.estoque - qtd < 0) return alert("Estoque insuficiente!");
-      i.estoque -= qtd;
-    } else i.estoque = qtd;
-    pilha.push({ data: new Date().toLocaleString("pt-BR"), codigoInsumo: codigo, tipo, qtd, obs });
+    const i = todos.find((x) => x.codigo === mCodigo); if (!i) return alert("Selecione um insumo");
+    if (mTipo === "ENTRADA") i.estoque += mQtd;
+    else if (mTipo === "SAIDA") {
+      if (i.estoque - mQtd < 0) return alert("Estoque insuficiente!");
+      i.estoque -= mQtd;
+    } else i.estoque = mQtd;
+    pilha.push({ data: new Date().toLocaleString("pt-BR"), codigoInsumo: mCodigo, tipo: mTipo, qtd: mQtd, obs: mObs });
     if (i.estoque < i.minimo) fila.enfileirar({ codigoInsumo: i.codigo, sugerido: i.minimo * 2 - i.estoque, data: new Date().toLocaleString("pt-BR") });
-    setObs(""); onChange();
+    setMObs(""); onChange();
   };
+
   return (
     <>
-      <H1 sub="">Controle de Estoque</H1>
-      <div className="bg-card p-5 rounded-xl border grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
-        <div><label className="text-xs text-muted-foreground">Insumo</label>
-          <select value={codigo} onChange={(e) => setCodigo(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm">
-            {ins.map((i) => <option key={i.codigo} value={i.codigo}>{i.codigo} — {i.nome}</option>)}
-          </select></div>
-        <div><label className="text-xs text-muted-foreground">Tipo</label>
-          <select value={tipo} onChange={(e) => setTipo(e.target.value as any)} className="w-full border rounded-md px-3 py-2 text-sm">
-            <option>ENTRADA</option><option>SAIDA</option><option>AJUSTE</option>
-          </select></div>
-        <div><label className="text-xs text-muted-foreground">Quantidade</label>
-          <input type="number" step="0.01" value={qtd} onChange={(e) => setQtd(parseFloat(e.target.value) || 0)} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
-        <div><label className="text-xs text-muted-foreground">Observação</label>
-          <input value={obs} onChange={(e) => setObs(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
-        <button onClick={registrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">Registrar</button>
-      </div>
+      <H1 sub="Cadastro de insumos e movimentações de estoque">Insumos e Controle de Estoque</H1>
+
+      {/* ===== Cadastrar insumo ===== */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-3 text-foreground flex items-center gap-2">
+          <span>➕</span> Cadastrar novo insumo
+        </h2>
+        <div className="bg-card p-5 rounded-xl border grid grid-cols-2 md:grid-cols-4 gap-3">
+          {(["codigo","nome","categoria","unidade"] as const).map((k) => (
+            <input key={k} placeholder={k} value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+              className="border rounded-md px-3 py-2 text-sm" />
+          ))}
+          {(["estoque","minimo","valor"] as const).map((k) => (
+            <input key={k} type="number" step="0.01" placeholder={k} value={(form as any)[k]}
+              onChange={(e) => setForm({ ...form, [k]: parseFloat(e.target.value) || 0 })}
+              className="border rounded-md px-3 py-2 text-sm" />
+          ))}
+          <button onClick={cadastrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
+        </div>
+      </section>
+
+      {/* ===== Controle de estoque ===== */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-3 text-foreground flex items-center gap-2">
+          <span>📦</span> Controle de estoque (movimentações)
+        </h2>
+        <div className="bg-card p-5 rounded-xl border grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+          <div><label className="text-xs text-muted-foreground">Insumo</label>
+            <select value={mCodigo} onChange={(e) => setMCodigo(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm">
+              {todos.map((i) => <option key={i.codigo} value={i.codigo}>{i.codigo} — {i.nome}</option>)}
+            </select></div>
+          <div><label className="text-xs text-muted-foreground">Tipo</label>
+            <select value={mTipo} onChange={(e) => setMTipo(e.target.value as any)} className="w-full border rounded-md px-3 py-2 text-sm">
+              <option>ENTRADA</option><option>SAIDA</option><option>AJUSTE</option>
+            </select></div>
+          <div><label className="text-xs text-muted-foreground">Quantidade</label>
+            <input type="number" step="0.01" value={mQtd} onChange={(e) => setMQtd(parseFloat(e.target.value) || 0)} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+          <div><label className="text-xs text-muted-foreground">Observação</label>
+            <input value={mObs} onChange={(e) => setMObs(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" /></div>
+          <button onClick={registrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">Registrar</button>
+        </div>
+      </section>
+
+      {/* ===== Lista de insumos ===== */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 text-foreground flex items-center gap-2">
+          <span>📋</span> Insumos cadastrados
+        </h2>
+        <input placeholder="🔍 Buscar por nome (busca sequencial)..." value={busca} onChange={(e) => setBusca(e.target.value)}
+          className="w-full border rounded-md px-3 py-2 text-sm mb-3" />
+        <Tabela
+          cabecalho={["Código","Nome","Categoria","Estoque","R$ unit.","Ação"]}
+          linhas={filtrados.map((i) => [
+            i.codigo, i.nome, i.categoria,
+            <>{i.estoque} {i.unidade} {i.estoque < i.minimo && <span className="ml-2 text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded">BAIXO</span>}</>,
+            `R$ ${i.valor.toFixed(2)}`,
+            <button onClick={() => remover(i.codigo)} className="text-destructive text-xs hover:underline">excluir</button>,
+          ])}
+        />
+      </section>
     </>
   );
 }
