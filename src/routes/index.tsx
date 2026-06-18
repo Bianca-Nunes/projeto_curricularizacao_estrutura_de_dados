@@ -81,12 +81,29 @@ const ICONES: Record<View, string> = {
 };
 
 function App() {
+  const navigate = useNavigate();
+  const [mounted, setMounted] = useState(false);
+  const [autorizado, setAutorizado] = useState(false);
   const [view, setView] = useState<View>("Dashboard");
   const [, setTick] = useState(0);
   const force = () => setTick((t) => t + 1);
 
   const [vendas, setVendas] = useState<Venda[]>(vendasSeed);
   const [contas, setContas] = useState<Conta[]>(contasSeed);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      if (localStorage.getItem("sis_auth") === "1") setAutorizado(true);
+      else navigate({ to: "/login" });
+    }
+  }, [navigate]);
+
+  const sair = () => {
+    localStorage.removeItem("sis_auth");
+    navigate({ to: "/login" });
+  };
+
 
   const { listaInsumos, hashInsumos, listaProdutos, hashProdutos, pilha, fila } = useMemo(() => {
     const li = new ListaEncadeada<Insumo>();
