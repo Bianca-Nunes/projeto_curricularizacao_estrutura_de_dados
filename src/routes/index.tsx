@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   ListaEncadeada, Pilha, Fila, TabelaHash,
   buscaSequencial, bubbleSort, insertionSort,
