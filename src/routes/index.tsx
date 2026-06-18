@@ -128,6 +128,8 @@ function App() {
     return { listaInsumos: li, hashInsumos: hi, listaProdutos: lp, hashProdutos: hp, pilha: p, fila: f };
   }, []);
 
+  if (!mounted || !autorizado) return null;
+
   return (
     <div className="flex min-h-screen w-full bg-background">
       <aside className="w-64 bg-sidebar text-sidebar-foreground p-5 flex flex-col gap-1">
@@ -139,13 +141,17 @@ function App() {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+            className={`flex items-start gap-2 text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${
               view === v ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent"
             }`}
           >
-            <span className="mr-2">{ICONES[v]}</span>{ROTULOS[v]}
+            <span className="w-5 shrink-0 leading-snug">{ICONES[v]}</span>
+            <span className="flex-1 leading-snug">{ROTULOS[v]}</span>
           </button>
         ))}
+        <button onClick={sair} className="mt-4 text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-sidebar-accent opacity-80">
+          ⎋ Sair
+        </button>
         <div className="mt-auto pt-6 text-xs opacity-60">
           Trabalho acadêmico<br />Estrutura de Dados • ADS
         </div>
