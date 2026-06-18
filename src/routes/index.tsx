@@ -76,7 +76,7 @@ const ROTULOS: Record<View, string> = {
 };
 
 const ICONES: Record<View, string> = {
-  Dashboard: "📊", Insumos: "🥚", Produtos: "🎂",
+  Dashboard: "📊", Insumos: "📦", Produtos: "🎂",
   Receitas: "💰", Registradora: "🧾", Reposição: "🔄", Benchmark: "⚡",
 };
 
