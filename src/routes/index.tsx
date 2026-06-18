@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   ListaEncadeada, Pilha, Fila, TabelaHash,
   buscaSequencial, bubbleSort, insertionSort,
@@ -76,17 +76,34 @@ const ROTULOS: Record<View, string> = {
 };
 
 const ICONES: Record<View, string> = {
-  Dashboard: "📊", Insumos: "🥚", Produtos: "🎂",
+  Dashboard: "📊", Insumos: "📦", Produtos: "🎂",
   Receitas: "💰", Registradora: "🧾", Reposição: "🔄", Benchmark: "⚡",
 };
 
 function App() {
+  const navigate = useNavigate();
+  const [mounted, setMounted] = useState(false);
+  const [autorizado, setAutorizado] = useState(false);
   const [view, setView] = useState<View>("Dashboard");
   const [, setTick] = useState(0);
   const force = () => setTick((t) => t + 1);
 
   const [vendas, setVendas] = useState<Venda[]>(vendasSeed);
   const [contas, setContas] = useState<Conta[]>(contasSeed);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      if (localStorage.getItem("sis_auth") === "1") setAutorizado(true);
+      else navigate({ to: "/login" });
+    }
+  }, [navigate]);
+
+  const sair = () => {
+    localStorage.removeItem("sis_auth");
+    navigate({ to: "/login" });
+  };
+
 
   const { listaInsumos, hashInsumos, listaProdutos, hashProdutos, pilha, fila } = useMemo(() => {
     const li = new ListaEncadeada<Insumo>();
@@ -111,6 +128,8 @@ function App() {
     return { listaInsumos: li, hashInsumos: hi, listaProdutos: lp, hashProdutos: hp, pilha: p, fila: f };
   }, []);
 
+  if (!mounted || !autorizado) return null;
+
   return (
     <div className="flex min-h-screen w-full bg-background">
       <aside className="w-64 bg-sidebar text-sidebar-foreground p-5 flex flex-col gap-1">
@@ -122,13 +141,17 @@ function App() {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={`text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+            className={`flex items-start gap-2 text-left px-3 py-2.5 rounded-lg text-sm font-medium transition ${
               view === v ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent"
             }`}
           >
-            <span className="mr-2">{ICONES[v]}</span>{ROTULOS[v]}
+            <span className="w-5 shrink-0 leading-snug">{ICONES[v]}</span>
+            <span className="flex-1 leading-snug">{ROTULOS[v]}</span>
           </button>
         ))}
+        <button onClick={sair} className="mt-4 text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-sidebar-accent opacity-80">
+          ⎋ Sair
+        </button>
         <div className="mt-auto pt-6 text-xs opacity-60">
           Trabalho acadêmico<br />Estrutura de Dados • ADS
         </div>
@@ -299,17 +322,24 @@ function Insumos({ lista, hash, pilha, fila, onChange }: any) {
         <h2 className="text-lg font-semibold mb-3 text-foreground flex items-center gap-2">
           <span>➕</span> Cadastrar novo insumo
         </h2>
-        <div className="bg-card p-5 rounded-xl border grid grid-cols-2 md:grid-cols-4 gap-3">
-          {(["codigo","nome","categoria","unidade"] as const).map((k) => (
-            <input key={k} placeholder={k} value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-              className="border rounded-md px-3 py-2 text-sm" />
-          ))}
-          {(["estoque","minimo","valor"] as const).map((k) => (
-            <input key={k} type="number" step="0.01" placeholder={k} value={(form as any)[k]}
-              onChange={(e) => setForm({ ...form, [k]: parseFloat(e.target.value) || 0 })}
-              className="border rounded-md px-3 py-2 text-sm" />
-          ))}
-          <button onClick={cadastrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
+        <div className="bg-card p-5 rounded-xl border space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {(["codigo","nome","categoria","unidade"] as const).map((k) => (
+              <input key={k} placeholder={k} value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+                className="border rounded-md px-3 py-2 text-sm" />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+            <div>
+              <label className="text-xs text-muted-foreground">Preço (R$)</label>
+              <input type="number" step="0.01" value={form.valor}
+                onChange={(e) => setForm({ ...form, valor: parseFloat(e.target.value) || 0 })}
+                className="w-full border rounded-md px-3 py-2 text-sm" />
+            </div>
+            <div className="md:col-start-4">
+              <button onClick={cadastrar} className="w-full bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
+            </div>
+          </div>
         </div>
       </section>
 
