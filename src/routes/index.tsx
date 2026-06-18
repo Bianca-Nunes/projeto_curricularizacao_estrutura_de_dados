@@ -322,17 +322,24 @@ function Insumos({ lista, hash, pilha, fila, onChange }: any) {
         <h2 className="text-lg font-semibold mb-3 text-foreground flex items-center gap-2">
           <span>➕</span> Cadastrar novo insumo
         </h2>
-        <div className="bg-card p-5 rounded-xl border grid grid-cols-2 md:grid-cols-4 gap-3">
-          {(["codigo","nome","categoria","unidade"] as const).map((k) => (
-            <input key={k} placeholder={k} value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-              className="border rounded-md px-3 py-2 text-sm" />
-          ))}
-          {(["estoque","minimo","valor"] as const).map((k) => (
-            <input key={k} type="number" step="0.01" placeholder={k} value={(form as any)[k]}
-              onChange={(e) => setForm({ ...form, [k]: parseFloat(e.target.value) || 0 })}
-              className="border rounded-md px-3 py-2 text-sm" />
-          ))}
-          <button onClick={cadastrar} className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
+        <div className="bg-card p-5 rounded-xl border space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {(["codigo","nome","categoria","unidade"] as const).map((k) => (
+              <input key={k} placeholder={k} value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+                className="border rounded-md px-3 py-2 text-sm" />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+            <div>
+              <label className="text-xs text-muted-foreground">Preço (R$)</label>
+              <input type="number" step="0.01" value={form.valor}
+                onChange={(e) => setForm({ ...form, valor: parseFloat(e.target.value) || 0 })}
+                className="w-full border rounded-md px-3 py-2 text-sm" />
+            </div>
+            <div className="md:col-start-4">
+              <button onClick={cadastrar} className="w-full bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold hover:opacity-90">+ Cadastrar</button>
+            </div>
+          </div>
         </div>
       </section>
 
